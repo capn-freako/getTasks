@@ -5,6 +5,7 @@
 --
 -- Copyright (c) 2018 David Banas; all rights reserved World wide.
 
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Main where
@@ -13,6 +14,7 @@ import Control.Arrow        ((&&&))
 import Control.Exception
 import Control.Monad        (forM, forM_)
 import Data.Semigroup       ((<>))
+import Data.Text            (strip, pack, unpack)
 import Options.Applicative
 import System.Directory     (doesFileExist, doesDirectoryExist, getDirectoryContents)
 import System.FilePath      ((</>))
@@ -59,9 +61,13 @@ scanFile :: FilePath -> IO ()
 scanFile fp = catch (do
   ft <- readFile fp
   let strs = lines ft
-      tsks = filter (uncurry (&&) . (and &&& (\xs -> length xs > 4)) . zipWith (==) "- [ ]") strs
+      tsks = filter ( uncurry (&&)
+                    . (and &&& (\xs -> length xs > 4))
+                    . zipWith (==) "- [ ]"
+                    )
+             . map (unpack . strip . pack) $ strs
   if length tsks > 0 then do putStrLn $ "\n" ++ show fp ++ ":"
-                             putStr $ unlines tsks
+                             putStr $ unlines . map (('-' :) . drop 5) $ tsks
                      else return ())
   (\(SomeException _) -> return ())
 
