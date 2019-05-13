@@ -66,7 +66,7 @@ scanFile fp = catch (do
                     . zipWith (==) "- [ ]"
                     )
              . map (unpack . strip . pack) $ strs
-  if length tsks > 0 then do putStrLn $ "\n" ++ show fp ++ ":"
+  if length tsks > 0 then do putStrLn $ "\n## " ++ show fp ++ ":\n"
                              putStr $ unlines . map (('-' :) . drop 5) $ tsks
                      else return ())
   (\(SomeException _) -> return ())
