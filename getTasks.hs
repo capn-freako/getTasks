@@ -20,15 +20,18 @@ import Options.Applicative  ( strOption, long, short, metavar, showDefault, valu
 
 import Control.Arrow        ((&&&), (***))
 import Control.Exception    (catch, SomeException (..))
-import Control.Monad        (forM, forM_)
+import Control.Monad        (forM, forM_, unless)
 import Data.Char            (isSpace)
 import Data.Either          (isRight)
 import Data.List            (groupBy)
+import Data.Maybe           (mapMaybe)
 import Data.Semigroup       ((<>))
 import Data.Text            (strip, pack, unpack, Text)
 import System.Directory     (doesFileExist, doesDirectoryExist, getDirectoryContents)
-import System.FilePath      ((</>))
+import System.FilePath.Posix ((</>), takeExtension, dropExtensions)
 import Text.ParserCombinators.Parsec
+
+jrnlFileExt = "page"
 
 data Opts = Opts
   { ext        :: String
@@ -128,10 +131,19 @@ findTasks Opts{..} = do
 -- The lion's share of the work is done here,
 -- relying heavily on various helper functions.
 scanFile :: FilePath -> IO ()
-scanFile fp = catch (do
-  ft <- readFile fp
-  putStrLn $ unlines $ map show $ getToDos $ sections ft)
-  (\(SomeException _) -> return ())
+scanFile fp = catch
+  ( do ft <- readFile fp
+       let toDos = getToDos $ sections ft
+       unless (null toDos) $ do
+         putStrLn "<hr>"
+         putStrLn "<hr>"
+         putStrLn $ "[" ++ dropExtensions fp ++ "]()\n"
+         putStrLn $ unlines $ map show toDos
+  )
+  ( \(SomeException e) -> do
+      print e
+      return ()
+  )
 
 -- | Recursively scan a directory, making use of both:
 --
@@ -140,7 +152,9 @@ scanFile fp = catch (do
 scanDir :: FilePath -> IO ()
 scanDir fp = do
   fps <- getRecursiveContents fp
-  forM_ fps scanFile
+  -- let fps' = mapMaybe (stripExtension jrnlFileExt) fps
+  let fps' = filter ((== ".page") . takeExtension) fps
+  forM_ fps' scanFile
 
 -- | Recursively scan a directory, yielding a list of all encompassed files.
 --
