@@ -63,6 +63,7 @@ executable getTasks
                      , optparse-applicative
                      , parsec >= 3.1.13.0
                      , text
+                     , time
   -- Directories containing source files.
   -- hs-source-dirs:
 

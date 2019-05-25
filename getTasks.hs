@@ -27,6 +27,9 @@ import Data.List            (groupBy)
 import Data.Maybe           (mapMaybe)
 import Data.Semigroup       ((<>))
 import Data.Text            (strip, pack, unpack, Text)
+import Data.Time.Clock
+import Data.Time.LocalTime
+import Data.Time.Calendar
 import System.Directory     (doesFileExist, doesDirectoryExist, getDirectoryContents)
 import System.FilePath.Posix ((</>), takeExtension, dropExtensions)
 import Text.ParserCombinators.Parsec
@@ -120,6 +123,13 @@ main = findTasks =<< execParser opts'
 -- Call @'scanFile'@ or @'scanDir'@ helper function, as appropriate.
 findTasks :: Opts -> IO ()
 findTasks Opts{..} = do
+  t  <- getCurrentTime
+  tz <- getCurrentTimeZone
+  let t' = utcToZonedTime tz t
+  putStrLn "---"
+  putStrLn $ "title: Incomplete Action Items as of: " ++ show t'
+  putStrLn "format: markdown"
+  putStrLn "...\n"
   isFile <-doesFileExist      srcd
   isDir  <-doesDirectoryExist srcd
   if isFile then scanFile srcd
@@ -291,3 +301,7 @@ getSubs p ps@(p':ps') =
 
 -- | for
 for = flip map
+
+-- | Get the current date.
+date :: IO (Integer, Int, Int) -- :: (year, month, day)
+date = getCurrentTime >>= return . toGregorian . utctDay
