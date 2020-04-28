@@ -31,10 +31,16 @@ import Data.Time.Clock
 import Data.Time.LocalTime
 import Data.Time.Calendar
 import System.Directory     (doesFileExist, doesDirectoryExist, getDirectoryContents)
-import System.FilePath.Posix ((</>), takeExtension, dropExtensions)
+import System.FilePath.Posix ((</>), takeExtension, dropExtensions, takeBaseName)
 import Text.ParserCombinators.Parsec
 
-jrnlFileExt = "page"
+jrnlFileExts = [ ".page"
+               , ".md"
+               ]
+
+-- Base names of any files that should be excluded from processing.
+excludedFiles = [ "currentTasks"
+                ]
 
 data Opts = Opts
   { ext        :: String
@@ -129,12 +135,14 @@ findTasks Opts{..} = do
   putStrLn "---"
   putStrLn $ "title: Incomplete Action Items as of: " ++ show t'
   putStrLn "format: markdown"
-  putStrLn "...\n"
+  putStrLn "...\n\n"
+  putStrLn "[Back to *Home*](home)\n"
   isFile <-doesFileExist      srcd
   isDir  <-doesDirectoryExist srcd
   if isFile then scanFile srcd
             else if isDir then scanDir srcd
                           else error $ "Sorry, but " ++ show srcd ++ " does not exist."
+  putStrLn "\n[Back to *Home*](home)\n"
 
 -- | Scan a file for incomplete action items.
 --
@@ -147,7 +155,8 @@ scanFile fp = catch
        unless (null toDos) $ do
          putStrLn "<hr>"
          putStrLn "<hr>"
-         putStrLn $ "[" ++ dropExtensions fp ++ "]()\n"
+         let fn = dropExtensions fp
+         putStrLn $ "[" ++ fn ++ "](" ++ fn ++ ")\n"
          putStrLn $ unlines $ map show toDos
   )
   ( \(SomeException e) -> do
@@ -162,8 +171,11 @@ scanFile fp = catch
 scanDir :: FilePath -> IO ()
 scanDir fp = do
   fps <- getRecursiveContents fp
-  -- let fps' = mapMaybe (stripExtension jrnlFileExt) fps
-  let fps' = filter ((== ".page") . takeExtension) fps
+  let fps' = filter ( uncurry (&&)
+                    . ( ((`elem` jrnlFileExts) . takeExtension)
+                        &&& (not .  (`elem` excludedFiles) . takeBaseName)
+                      )
+                    ) fps
   forM_ fps' scanFile
 
 -- | Recursively scan a directory, yielding a list of all encompassed files.
