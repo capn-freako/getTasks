@@ -23,8 +23,9 @@ import Control.Exception    (catch, SomeException (..))
 import Control.Monad        (forM, forM_, unless)
 import Data.Char            (isSpace)
 import Data.Either          (isRight)
-import Data.List            (groupBy)
+import Data.List            (groupBy, sortOn)
 import Data.Maybe           (mapMaybe)
+import Data.Ord             (Down(..))
 import Data.Semigroup       ((<>))
 import Data.Text            (strip, pack, unpack, Text)
 import Data.Time.Clock
@@ -135,6 +136,7 @@ findTasks Opts{..} = do
   putStrLn "---"
   putStrLn $ "title: Incomplete Action Items as of: " ++ show t'
   putStrLn "format: markdown"
+  putStrLn "toc: no"
   putStrLn "...\n\n"
   putStrLn "[Back to *Home*](home)\n"
   isFile <-doesFileExist      srcd
@@ -171,11 +173,12 @@ scanFile fp = catch
 scanDir :: FilePath -> IO ()
 scanDir fp = do
   fps <- getRecursiveContents fp
-  let fps' = filter ( uncurry (&&)
+  let fps' = sortOn Down
+           . filter ( uncurry (&&)
                     . ( ((`elem` jrnlFileExts) . takeExtension)
                         &&& (not .  (`elem` excludedFiles) . takeBaseName)
                       )
-                    ) fps
+                    ) $ fps
   forM_ fps' scanFile
 
 -- | Recursively scan a directory, yielding a list of all encompassed files.
